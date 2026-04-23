@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NIDS Dashboard</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>">
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🛡️ Network Intrusion Detection System</h1>
+            <div class="header-controls">
+                <button class="theme-btn" onclick="toggleTheme()" id="themeBtn">🌙</button>
+                <div class="status-indicator stopped" id="statusIndicator">● Stopped</div>
+            </div>
+            <div class="controls">
+                <button id="startBtn" onclick="startSniffing()">▶ Start</button>
+                <button id="stopBtn" onclick="stopSniffing()" disabled>⏹ Stop</button>
+                <button onclick="resetAlerts()">🔄 Reset</button>
+                <button onclick="testAlert()">🧪 Test</button>
+                <button onclick="exportAlerts()">📥 Export</button>
+            </div>
+        </header>
+
+        <div class="stats">
+            <div class="stat-card">
+                <h3>Packets</h3>
+                <p id="packetCount">0</p>
+            </div>
+            <div class="stat-card">
+                <h3>Unique IPs</h3>
+                <p id="uniqueIPs">0</p>
+            </div>
+            <div class="stat-card">
+                <h3>Alerts</h3>
+                <p id="alertCount">0</p>
+            </div>
+            <div class="stat-card">
+                <h3>Data (KB)</h3>
+                <p id="dataSize">0</p>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="left-panel">
+                <div class="alerts-section">
+                    <h2>⚠️ Alerts</h2>
+                    <div id="alertsContainer"></div>
+                </div>
+
+                <div class="top-sources">
+                    <h2>📊 Top Source IPs</h2>
+                    <ul id="topSources"></ul>
+                </div>
+            </div>
+
+            <div class="right-panel">
+                <div class="charts">
+                    <h2>📈 Traffic Over Time</h2>
+                    <canvas id="trafficChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let updateInterval;
+
+        function showToast(message, type) {
+            const existing = document.querySelector('.toast');
+            if (existing) existing.remove();
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => {
+                toast.style.animation = 'slideOut 0.3s ease forwards';
+                setTimeout(() => toast.remove(), 300);
+            }, 2000);
+        }
+
+        function setStatus(status) {
+            const indicator = document.getElementById('statusIndicator');
+            indicator.className = `status-indicator ${status}`;
+            const labels = { stopped: '● Stopped', starting: '◐ Starting...', running: '▶ Running', stopping: '◑ Stopping...' };
+            indicator.textContent = labels[status];
+        }
+
+let darkMode = true;
+        function toggleTheme() {
+            darkMode = !darkMode;
+            document.body.className = darkMode ? '' : 'light';
+            document.getElementById('themeBtn').textContent = darkMode ? '🌙' : '☀️';
+            if (chart) initChart();
+        }
+
+        function initChart() {
+            const ctx = document.getElementById('trafficChart').getContext('2d');
+            const gridColor = darkMode ? '#1a1a2e' : '#e0e0e0';
+            const textColor = darkMode ? '#888' : '#666';
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Packets/sec',
+                        data: [],
+                        borderColor: darkMode ? '#00d9ff' : '#007bff',
+                        backgroundColor: darkMode ? 'rgba(0, 217, 255, 0.1)' : 'rgba(0, 123, 255, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 0,
+                        pointHoverRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: { duration: 600, easing: 'easeInOutQuart' },
+                    interaction: { intersect: false, mode: 'index' },
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: textColor, font: { size: 10 } } },
+                        x: { grid: { display: false }, ticks: { color: textColor, maxTicksLimit: 8, font: { size: 10 } } }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { backgroundColor: darkMode ? '#16213e' : '#fff', titleColor: darkMode ? '#eee' : '#222', bodyColor: darkMode ? '#00d9ff' : '#007bff' }
+                    }
+                }
+            });
+        }
+
+        function startSniffing() {
+            setStatus('starting');
+            fetch("/api/start", { method: "POST" })
+                .then(res => res.json())
+                .then(() => {
+                    setStatus('running');
+                    showToast('Packet capture started!', 'success');
+                    document.getElementById("startBtn").disabled = true;
+                    document.getElementById("stopBtn").disabled = false;
+                    updateInterval = setInterval(updateDashboard, 2000);
+                })
+                .catch(() => {
+                    setStatus('stopped');
+                    showToast('Failed to start capture', 'error');
+                });
+        }
+
+        function stopSniffing() {
+            setStatus('stopping');
+            fetch("/api/stop", { method: "POST" })
+                .then(res => res.json())
+                .then(() => {
+                    setStatus('stopped');
+                    showToast('Packet capture stopped!', 'info');
+                    document.getElementById("startBtn").disabled = false;
+                    document.getElementById("stopBtn").disabled = true;
+                    clearInterval(updateInterval);
+                    updateDashboard();
+                });
+        }
+
+        function resetAlerts() {
+            fetch("/api/reset", { method: "POST" })
+                .then(res => res.json())
+                .then(() => {
+                    showToast('Alerts reset!', 'info');
+                    updateDashboard();
+                });
+        }
+
+        function testAlert() {
+            fetch("/api/test", { method: "POST" })
+                .then(res => res.json())
+                .then(() => {
+                    showToast('Test alerts (ML + Blocked IP)!', 'success');
+                    updateDashboard();
+                });
+        }
+
+        function exportAlerts() {
+            window.open("/api/export", "_blank");
+        }
+
+        function updateDashboard() {
+            fetch("/api/alerts")
+                .then(res => res.json())
+                .then(alerts => {
+                    const container = document.getElementById("alertsContainer");
+                    container.innerHTML = alerts.map(a => `
+                        <div class="alert ${a.severity.toLowerCase()}">
+                            <span class="severity">${a.severity}</span>
+                            <span class="type">${a.type}</span>
+                            ${a.confidence ? `<span class="confidence">${Math.round(a.confidence * 100)}% confidence</span>` : ''}
+                            <span class="src">${a.src_ip || '-'} → ${a.dst_ip || '-'}</span>
+                            <span class="time">${a.timestamp || ''}</span>
+                            <span class="details">${a.details || ''}</span>
+                        </div>
+                    `).join("");
+                    document.getElementById("alertCount").textContent = alerts.length;
+                });
+
+fetch("/api/status")
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById("packetCount").textContent = data.stats.packet_count || 0;
+                    document.getElementById("uniqueIPs").textContent = data.stats.unique_ips || 0;
+                    document.getElementById("dataSize").textContent = Math.round((data.stats.total_bytes || 0) / 1024);
+                    const sources = data.stats.top_sources || [];
+                    document.getElementById("topSources").innerHTML = sources.map(([ip, count]) =>
+                        `<li>${ip} <span>${count} packets</span></li>`
+                    ).join("");
+                    if (data.stats.graph) {
+                        updateChart(data.stats.graph.packets_per_sec || 0);
+                    }
+                });
+        }
+
+        setInterval(updateDashboard, 2000);
+
+        let trafficData = [];
+        let chart;
+
+        function initChart() {
+            const ctx = document.getElementById('trafficChart').getContext('2d');
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Packets/sec',
+                        data: [],
+                        borderColor: '#00d9ff',
+                        backgroundColor: 'rgba(0, 217, 255, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 0,
+                        pointHoverRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: { duration: 600, easing: 'easeInOutQuart' },
+                    interaction: { intersect: false, mode: 'index' },
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: '#1a1a2e' }, ticks: { color: '#888', font: { size: 10 } } },
+                        x: { grid: { display: false }, ticks: { color: '#888', maxTicksLimit: 8, font: { size: 10 } } }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { backgroundColor: '#16213e', titleColor: '#eee', bodyColor: '#00d9ff' }
+                    }
+                }
+            });
+        }
+
+        function updateChart(packetsPerSec) {
+            if (!chart) initChart();
+            const now = new Date().toLocaleTimeString();
+            trafficData.push({ time: now, value: packetsPerSec });
+            if (trafficData.length > 20) trafficData.shift();
+            chart.data.labels = trafficData.map(d => d.time);
+            chart.data.datasets[0].data = trafficData.map(d => d.value);
+            chart.update();
+        }
+
+        initChart();
+    </script>
+</body>
+</html>
