@@ -175,7 +175,7 @@ def start_sniffing(interface=None, count=0, timeout=None):
         from scapy.config import conf
         conf.use_pcap = True
         print("[*] Starting packet capture...")
-        global _sniffer, _stop_event
+        # Use module-level globals
         _stop_event = __import__('threading').Event()
         _sniffer = PacketSniffer()
         try:
