@@ -174,14 +174,16 @@ def start_sniffing(interface=None, count=0, timeout=None):
         from scapy.all import sniff
         from scapy.config import conf
         conf.use_pcap = True
-        global _sniffer, _stop_event
         print("[*] Starting packet capture...")
-    try:
-        sniff(prn=process_packet, store=False, iface=interface, count=count, timeout=timeout, stop_filter=lambda x: _stop_event.is_set())
-    except KeyboardInterrupt:
-        print("[*] Sniffing stopped")
-    except Exception as e:
-        print(f"[!] Error: {e}")
+        global _sniffer, _stop_event
+        _stop_event = __import__('threading').Event()
+        _sniffer = PacketSniffer()
+        try:
+            sniff(prn=process_packet, store=False, iface=interface, count=count, timeout=timeout, stop_filter=lambda x: _stop_event.is_set())
+        except KeyboardInterrupt:
+            print("[*] Sniffing stopped")
+        except Exception as e:
+            print(f"[!] Error: {e}")
 
 def get_alerts():
     global _sniffer
