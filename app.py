@@ -82,9 +82,12 @@ def run_sniffer():
     except Exception as e:
         print(f"Sniffer error: {e}")
 
+import os
+
 if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
     print("="*50)
     print("NIDS Dashboard: http://localhost:5000")
     print("NOTE: Run as Administrator for packet capture!")
     print("="*50)
-    app.run(debug=False, port=5000, threaded=True)
+    app.run(debug=False, host="0.0.0.0", port=port, threaded=True)
