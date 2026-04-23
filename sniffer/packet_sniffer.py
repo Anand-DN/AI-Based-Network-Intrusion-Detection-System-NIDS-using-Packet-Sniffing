@@ -96,10 +96,10 @@ class PacketSniffer:
         return True
     
     def get_graph_data(self):
-        packets_per_sec = len(self.traffic_history) / 60 if self.traffic_history else 0
+        current_rate = len(self.traffic_history) / 60 if self.traffic_history else 0
         return {
             "packets": self.packet_count,
-            "packets_per_sec": round(packets_per_sec, 1),
+            "packets_per_sec": round(current_rate, 1),
             "unique_ips": len(self.ip_tracker),
             "alerts_count": len(self.alerts),
             "time_window": 60
@@ -149,9 +149,8 @@ def start_sniffing(interface=None, count=0, timeout=None):
         _stop_event = __import__('threading').Event()
         _sniffer = PacketSniffer()
         print("[*] Running in demo mode (cloud)")
-        import threading
+        import threading, time, random
         def demo_traffic():
-            import time, random
             demo_ips = ["142.250.1.1", "172.217.1.1", "104.16.1.1"]
             ports = [80, 443, 22, 3389]
             while _sniffer and _stop_event and not _stop_event.is_set():
@@ -165,7 +164,9 @@ def start_sniffing(interface=None, count=0, timeout=None):
                     "size": random.randint(64, 1500)
                 }
                 _sniffer.process_packet(type('Packet', (), packet_info)())
-                time.sleep(random.uniform(1, 3))
+                _sniffer.traffic_history.append((time.time(), _sniffer.packet_count))
+                _sniffer.traffic_history = [(t, c) for t, c in _sniffer.traffic_history if time.time() - t < 60]
+                time.sleep(random.uniform(0.5, 2))
         
         demo_thread = threading.Thread(target=demo_traffic)
         demo_thread.daemon = True
