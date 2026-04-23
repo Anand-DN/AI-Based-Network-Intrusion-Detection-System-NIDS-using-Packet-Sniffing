@@ -135,25 +135,53 @@ def process_packet(packet):
     if _sniffer and (_stop_event is None or not _stop_event.is_set()):
         _sniffer.process_packet(packet)
 
+def stop_sniffing():
+    global _stop_event
+    if _stop_event:
+        _stop_event.set()
+        
 def start_sniffing(interface=None, count=0, timeout=None):
-    from scapy.all import sniff
-    from scapy.config import conf
-    conf.use_pcap = True
-    global _sniffer, _stop_event
-    _stop_event = __import__('threading').Event()
-    _sniffer = PacketSniffer()
-    print("[*] Starting packet capture...")
+    import os
+    is_cloud = os.environ.get("PORT") and not os.environ.get("LOCAL")
+    
+    if is_cloud:
+        global _sniffer, _stop_event
+        _stop_event = __import__('threading').Event()
+        _sniffer = PacketSniffer()
+        print("[*] Running in demo mode (cloud)")
+        import threading
+        def demo_traffic():
+            import time, random
+            demo_ips = ["142.250.1.1", "172.217.1.1", "104.16.1.1"]
+            ports = [80, 443, 22, 3389]
+            while _sniffer and _stop_event and not _stop_event.is_set():
+                src = random.choice(demo_ips)
+                dst_port = random.choice(ports)
+                packet_info = {
+                    "src_ip": src,
+                    "dst_ip": "192.168.1.1",
+                    "type": "TCP",
+                    "dst_port": dst_port,
+                    "size": random.randint(64, 1500)
+                }
+                _sniffer.process_packet(type('Packet', (), packet_info)())
+                time.sleep(random.uniform(1, 3))
+        
+        demo_thread = threading.Thread(target=demo_traffic)
+        demo_thread.daemon = True
+        demo_thread.start()
+    else:
+        from scapy.all import sniff
+        from scapy.config import conf
+        conf.use_pcap = True
+        global _sniffer, _stop_event
+        print("[*] Starting packet capture...")
     try:
         sniff(prn=process_packet, store=False, iface=interface, count=count, timeout=timeout, stop_filter=lambda x: _stop_event.is_set())
     except KeyboardInterrupt:
         print("[*] Sniffing stopped")
     except Exception as e:
         print(f"[!] Error: {e}")
-
-def stop_sniffing():
-    global _stop_event
-    if _stop_event:
-        _stop_event.set()
 
 def get_alerts():
     global _sniffer
