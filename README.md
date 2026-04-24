@@ -1,56 +1,66 @@
-# Network Intrusion Detection System (NIDS)
+# Federated Fraud Detection System
 
-A real-time network intrusion detection system with live dashboard and ML-based anomaly detection.
+Privacy-Preserving UPI Fraud Detection with Differential Privacy
 
-## Features
-
-- **Real-time Packet Capture** - Monitors network traffic using Scapy
-- **Attack Detection**:
-  - SYN Flood Detection
-  - Port Scan Detection  
-  - Blocked IP Detection
-  - ML Anomaly Detection with confidence scores
-- **Live Dashboard** - Traffic graphs, alerts, and statistics
-- **Theme Toggle** - Dark/Light mode
-- **Export** - Export alerts to CSV
-
-## Tech Stack
-
-- **Backend**: Python, Flask, Scapy
-- **Frontend**: HTML, CSS, JavaScript, Chart.js
-
-## Installation
+## Quick Start
 
 ```bash
-git clone <your-repo-url>
-cd NIDS
+# Install dependencies
 pip install -r requirements.txt
+
+# Run the prediction pipeline
+python main.py
+
+# Launch Streamlit dashboard
+streamlit run app.py
 ```
-
-## Usage
-
-Run as Administrator:
-
-```bash
-python app.py
-```
-
-Open http://localhost:5000
-
-## Requirements
-
-- Python 3.8+
-- Npcap (Windows) - Download from https://nmap.org/npcap/
 
 ## Deployment
 
-Deploy to Render:
-1. Push to GitHub
-2. Create Web Service on render.com
-3. Connect GitHub repo
-4. Build Command: `pip install -r requirements.txt`
-5. Start Command: `python app.py`
+### Streamlit Cloud (Recommended)
 
-## License
+1. Push code to GitHub
+2. Go to [share.streamlit.io](https://share.streamlit.io)
+3. Connect your repository
+4. Set:
+   - Main file: `app.py`
+   - Python version: 3.12
 
-MIT
+### Local
+
+```bash
+streamlit run app.py --server.port 8501
+```
+
+### Docker
+
+```dockerfile
+FROM python:3.12-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+COPY . .
+EXPOSE 8501
+CMD ["streamlit", "run", "app.py", "--server.address", "0.0.0.0"]
+```
+
+```bash
+docker build -t fraud-detection .
+docker run -p 8501:8501 fraud-detection
+```
+
+## Features
+
+- Federated Learning with Differential Privacy
+- Secure Aggregation with Byzantine tolerance
+- Multi-model comparison (LR/RF/MLP)
+- Per-bank evaluation
+- Privacy budget tracking
+- Real-time fraud prediction
+
+## Architecture
+
+- **Banks (Clients)**: Train models locally on private data
+- **Central Server**: Aggregates model weights (not data)
+- **Differential Privacy**: Gaussian noise prevents data reconstruction
+- **Privacy Budget**: Tracks cumulative epsilon spent
