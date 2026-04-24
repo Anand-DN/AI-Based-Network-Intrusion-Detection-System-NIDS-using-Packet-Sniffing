@@ -1,5 +1,2 @@
-streamlit
-pandas
-numpy
-matplotlib
-scikit-learn
+Flask>=2.0
+scapy>=2.4.5
