@@ -2,6 +2,8 @@
 
 A real-time network intrusion detection system with live dashboard and ML-based anomaly detection.
 
+Access Live Link here:  https://ai-based-network-intrusion-detection-7i19.onrender.com/
+
 ## Features
 
 - **Real-time Packet Capture** - Monitors network traffic using Scapy
