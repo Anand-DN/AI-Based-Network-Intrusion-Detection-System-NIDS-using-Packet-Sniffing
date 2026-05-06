@@ -1,7 +1,7 @@
 from flask import Flask, render_template, jsonify, request, Response
-from sniffer.packet_sniffer import start_sniffing, get_alerts, get_stats, reset_alerts, stop_sniffing
+from sniffer.packet_sniffer import start_sniffing, get_alerts, get_stats, reset_alerts, stop_sniffing, get_ml_data, train_ml, reset_ml
+from utils.logger import log_info, log_warning, log_error
 import threading
-import base64
 import time
 
 app = Flask(__name__)
@@ -13,10 +13,8 @@ def index():
 
 @app.route("/favicon.ico")
 def favicon():
-    return Response(
-        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🛡️</text></svg>',
-        mimetype="image/svg+xml"
-    )
+    from flask import send_from_directory
+    return send_from_directory("static", "favicon.svg", mimetype="image/svg+xml")
 
 @app.route("/api/status")
 def status():
@@ -37,6 +35,7 @@ def start():
         sniffing_thread.daemon = True
         sniffing_thread.start()
         time.sleep(0.5)
+        log_info("Packet sniffing started")
     return jsonify({"status": "started"})
 
 @app.route("/api/stop", methods=["POST"])
@@ -44,6 +43,7 @@ def stop():
     stop_sniffing()
     global sniffing_thread
     sniffing_thread = None
+    log_info("Packet sniffing stopped")
     return jsonify({"status": "stopped"})
 
 @app.route("/api/reset", methods=["POST"])
@@ -56,10 +56,11 @@ def test():
     import config
     from sniffer.packet_sniffer import _sniffer
     if _sniffer:
-        alert1 = _sniffer._create_alert("ML Anomaly", "MEDIUM", "Traffic Pattern", "Network", "IP", "Anomalous packet rate deviating from normal baseline", 0.87)
+        alert1 = _sniffer._create_alert("Statistical Anomaly", "MEDIUM", "Traffic Pattern", "Network", "IP", "Anomalous packet rate deviating from normal baseline", 0.87)
         alert2 = _sniffer._create_alert("Blocked IP", "CRITICAL", config.BLOCKED_IPS[0] if config.BLOCKED_IPS else "1.2.3.4", "192.168.1.1", "TCP", "IP in blocklist", 1.0)
         _sniffer.alerts.append(alert1)
         _sniffer.alerts.append(alert2)
+        log_info("Test alerts generated")
     return jsonify({"status": "tested"})
 
 @app.route("/api/export", methods=["GET"])
@@ -76,6 +77,20 @@ def export():
     output.seek(0)
     return Response(output.getvalue(), mimetype="text/csv", headers={"Content-Disposition": "attachment;filename=alerts.csv"})
 
+@app.route("/api/ml/status")
+def ml_status():
+    return jsonify(get_ml_data())
+
+@app.route("/api/ml/train", methods=["POST"])
+def ml_train():
+    result = train_ml()
+    return jsonify(result)
+
+@app.route("/api/ml/reset", methods=["POST"])
+def ml_reset():
+    result = reset_ml()
+    return jsonify(result)
+
 def run_sniffer():
     try:
         start_sniffing(count=0)
@@ -86,6 +101,7 @@ import os
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
+    log_info(f"NIDS Dashboard starting on port {port}")
     print("="*50)
     print("NIDS Dashboard: http://localhost:5000")
     print("NOTE: Run as Administrator for packet capture!")

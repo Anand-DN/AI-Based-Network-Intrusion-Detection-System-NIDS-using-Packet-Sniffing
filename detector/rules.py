@@ -25,7 +25,3 @@ def log_alert(alert_type, severity, src_ip, dst_ip, protocol, details, timestamp
         writer.writerow(alert)
     
     return alert
-
-def get_protocol_name(proto_num):
-    protocols = {6: "TCP", 17: "UDP", 1: "ICMP", 0: "IP"}
-    return protocols.get(proto_num, f"Proto-{proto_num}")

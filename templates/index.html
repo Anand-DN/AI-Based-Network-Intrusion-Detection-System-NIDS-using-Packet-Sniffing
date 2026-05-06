@@ -4,146 +4,459 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NIDS Dashboard</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>">
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
     <link rel="stylesheet" href="/static/style.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>🛡️ Network Intrusion Detection System</h1>
-            <div class="header-controls">
-                <button class="theme-btn" onclick="toggleTheme()" id="themeBtn">🌙</button>
-                <div class="status-indicator stopped" id="statusIndicator">● Stopped</div>
-            </div>
-            <div class="controls">
-                <button id="startBtn" onclick="startSniffing()">▶ Start</button>
-                <button id="stopBtn" onclick="stopSniffing()" disabled>⏹ Stop</button>
-                <button onclick="resetAlerts()">🔄 Reset</button>
-                <button onclick="testAlert()">🧪 Test</button>
-                <button onclick="exportAlerts()">📥 Export</button>
-            </div>
-        </header>
-
-        <div class="stats">
-            <div class="stat-card">
-                <h3>Packets</h3>
-                <p id="packetCount">0</p>
-            </div>
-            <div class="stat-card">
-                <h3>Unique IPs</h3>
-                <p id="uniqueIPs">0</p>
-            </div>
-            <div class="stat-card">
-                <h3>Alerts</h3>
-                <p id="alertCount">0</p>
-            </div>
-            <div class="stat-card">
-                <h3>Data (KB)</h3>
-                <p id="dataSize">0</p>
-            </div>
+    <div class="bg-animation">
+        <div class="bg-orb orb-1"></div>
+        <div class="bg-orb orb-2"></div>
+        <div class="bg-orb orb-3"></div>
+        <div class="bg-grid"></div>
+        <div class="scan-line"></div>
+        <div class="particles">
+            <span></span><span></span><span></span><span></span>
+            <span></span><span></span><span></span><span></span>
+            <span></span><span></span><span></span><span></span>
         </div>
-
-        <div class="main-content">
-            <div class="left-panel">
-                <div class="alerts-section">
-                    <h2>⚠️ Alerts</h2>
-                    <div id="alertsContainer"></div>
-                </div>
-
-                <div class="top-sources">
-                    <h2>📊 Top Source IPs</h2>
-                    <ul id="topSources"></ul>
-                </div>
-            </div>
-
-            <div class="right-panel">
-                <div class="charts">
-                    <h2>📈 Traffic Over Time</h2>
-                    <canvas id="trafficChart"></canvas>
-                </div>
-            </div>
+        <div class="network-lines">
+            <div class="line line-1"></div>
+            <div class="line line-2"></div>
+            <div class="line line-3"></div>
+            <div class="line line-4"></div>
+            <div class="line line-5"></div>
         </div>
     </div>
 
+    <div class="app-container">
+        <main class="main-content">
+            <header class="top-bar">
+                <div class="header-left">
+                    <div class="brand-inline">
+                        <svg viewBox="0 0 50 50" class="brand-logo">
+                            <path d="M25 3 L45 12 L45 25 Q45 40 25 47 Q5 40 5 25 L5 12 Z" fill="none" stroke="currentColor" stroke-width="2"/>
+                            <line x1="25" y1="15" x2="25" y2="35" stroke="currentColor" stroke-width="2"/>
+                            <circle cx="25" cy="12" r="2" fill="currentColor"/>
+                        </svg>
+                        <span class="brand-text">NIDS</span>
+                    </div>
+                </div>
+                <div class="header-right">
+                    <div class="status-indicator stopped" id="statusIndicator">
+                        <span class="status-dot"></span>
+                        <span class="status-text">Stopped</span>
+                    </div>
+                    <div class="live-clock" id="liveClock">00:00:00</div>
+                    <button class="theme-toggle" onclick="toggleTheme()">
+                        <i id="themeIcon" class="fas fa-moon"></i>
+                    </button>
+                </div>
+            </header>
+
+            <div class="tab-bar">
+                <button class="tab-btn active" data-section="dashboard">
+                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                </button>
+                <button class="tab-btn" data-section="analytics">
+                    <i class="fas fa-chart-line"></i> Analytics
+                </button>
+                <button class="tab-btn" data-section="threats">
+                    <i class="fas fa-shield-alt"></i> Threats
+                </button>
+                <button class="tab-btn" data-section="ml">
+                    <i class="fas fa-brain"></i> ML
+                </button>
+            </div>
+
+            <section class="content-section active" id="section-dashboard">
+                <div class="controls-bar">
+                    <button id="startBtn" onclick="startSniffing()" class="btn btn-success">
+                        <i class="btn-icon fas fa-play"></i> Start
+                    </button>
+                    <button id="stopBtn" onclick="stopSniffing()" class="btn btn-danger" disabled>
+                        <i class="btn-icon fas fa-stop"></i> Stop
+                    </button>
+                    <button onclick="resetAlerts()" class="btn btn-outline">
+                        <i class="btn-icon fas fa-redo"></i> Reset
+                    </button>
+                    <button onclick="testAlert()" class="btn btn-secondary">
+                        <i class="btn-icon fas fa-vial"></i> Test
+                    </button>
+                    <button onclick="exportAlerts()" class="btn btn-primary">
+                        <i class="btn-icon fas fa-download"></i> Export
+                    </button>
+                    <label class="auto-refresh">
+                        <input type="checkbox" id="autoRefresh" checked onchange="toggleAutoRefresh()">
+                        <span>Auto-refresh</span>
+                    </label>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon-bg blue"></div>
+                        <div class="stat-content">
+                            <h3>Total Packets</h3>
+                            <p id="packetCount">0</p>
+                        </div>
+                        <div class="stat-trend up" id="packetTrend">+0%</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon-bg green"></div>
+                        <div class="stat-content">
+                            <h3>Unique IPs</h3>
+                            <p id="uniqueIPs">0</p>
+                        </div>
+                        <div class="stat-trend up" id="ipTrend">+0%</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon-bg red"></div>
+                        <div class="stat-content">
+                            <h3>Total Alerts</h3>
+                            <p id="alertCount">0</p>
+                        </div>
+                        <div class="stat-trend up" id="alertTrend">+0%</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon-bg purple"></div>
+                        <div class="stat-content">
+                            <h3>Packets/sec</h3>
+                            <p id="packetsPerSec">0</p>
+                        </div>
+                        <div class="stat-trend" id="trafficTrend">--</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon-bg orange"></div>
+                        <div class="stat-content">
+                            <h3>Data Transferred</h3>
+                            <p id="dataSize">0 KB</p>
+                        </div>
+                        <div class="stat-trend" id="dataTrend">--</div>
+                    </div>
+                </div>
+
+                <div class="dashboard-grid">
+                    <div class="card chart-card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-chart-area"></i> Traffic Rate</h2>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="trafficChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="card alerts-card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-exclamation-triangle"></i> Recent Alerts</h2>
+                            <div class="alert-filters">
+                                <select id="severityFilter" onchange="filterAlerts()">
+                                    <option value="all">All Severities</option>
+                                    <option value="CRITICAL">Critical</option>
+                                    <option value="HIGH">High</option>
+                                    <option value="MEDIUM">Medium</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="alerts-list" id="alertsContainer">
+                            <p class="no-data">No alerts yet</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="content-section" id="section-analytics">
+                <div class="analytics-grid">
+                    <div class="card">
+                        <h2><i class="fas fa-pie-chart"></i> Protocol Distribution</h2>
+                        <div class="chart-container">
+                            <canvas id="protocolChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h2><i class="fas fa-chart-bar"></i> Alert Types</h2>
+                        <div class="chart-container">
+                            <canvas id="alertTypeChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h2><i class="fas fa-server"></i> Top Source IPs</h2>
+                        <div id="topSources" class="sources-list">
+                            <p class="no-data">No data available</p>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h2><i class="fas fa-wave-square"></i> Traffic Patterns</h2>
+                        <div class="chart-container">
+                            <canvas id="patternChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="content-section" id="section-threats">
+                <div class="threat-level-grid">
+                    <div class="threat-meter">
+                        <h2><i class="fas fa-radar"></i> Threat Level</h2>
+                        <div class="meter-circle">
+                            <svg viewBox="0 0 120 120">
+                                <circle cx="60" cy="60" r="50" fill="none" stroke="#e0e0e0" stroke-width="8"/>
+                                <circle cx="60" cy="60" r="50" fill="none" stroke="var(--success)" stroke-width="8" 
+                                      stroke-dasharray="314" stroke-dashoffset="314" id="threatMeter" stroke-linecap="round"/>
+                            </svg>
+                            <div class="meter-value" id="threatValue">Low</div>
+                        </div>
+                        <div class="threat-stats">
+                            <div class="threat-stat">
+                                <span class="threat-label">Critical</span>
+                                <span class="threat-num" id="criticalCount">0</span>
+                            </div>
+                            <div class="threat-stat">
+                                <span class="threat-label">High</span>
+                                <span class="threat-num" id="highCount">0</span>
+                            </div>
+                            <div class="threat-stat">
+                                <span class="threat-label">Medium</span>
+                                <span class="threat-num" id="mediumCount">0</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h2><i class="fas fa-skull-crossbones"></i> Critical Alerts</h2>
+                        <div id="criticalAlerts" class="alerts-list">
+                            <p class="no-data">No critical alerts</p>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h2><i class="fas fa-exclamation"></i> High Priority Alerts</h2>
+                        <div id="highAlerts" class="alerts-list">
+                            <p class="no-data">No high priority alerts</p>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h2><i class="fas fa-project-diagram"></i> Protocol Threat Analysis</h2>
+                        <div class="protocol-threat-list" id="protocolThreats">
+                            <div class="protocol-threat-item">
+                                <span class="protocol-name"><i class="fas fa-code-branch"></i> TCP</span>
+                                <div class="threat-bar"><div class="threat-fill" style="width: 30%; background: var(--success);"></div></div>
+                                <span class="threat-level">Low</span>
+                            </div>
+                            <div class="protocol-threat-item">
+                                <span class="protocol-name"><i class="fas fa-random"></i> UDP</span>
+                                <div class="threat-bar"><div class="threat-fill" style="width: 20%; background: var(--success);"></div></div>
+                                <span class="threat-level">Low</span>
+                            </div>
+                            <div class="protocol-threat-item">
+                                <span class="protocol-name"><i class="fas fa-bolt"></i> ICMP</span>
+                                <div class="threat-bar"><div class="threat-fill" style="width: 10%; background: var(--success);"></div></div>
+                                <span class="threat-level">Low</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="content-section" id="section-ml">
+                <div class="ml-controls">
+                    <button onclick="trainModel()" class="btn btn-primary" id="trainBtn">
+                        <i class="btn-icon fas fa-graduation-cap"></i> Train Model
+                    </button>
+                    <button onclick="resetModel()" class="btn btn-outline" id="resetMlBtn">
+                        <i class="btn-icon fas fa-undo"></i> Reset ML
+                    </button>
+                    <div class="ml-status-inline" id="mlStatusInline">
+                        <span class="ml-badge ml-badge-warn" id="mlBadge">Untrained</span>
+                    </div>
+                </div>
+
+                <div class="ml-grid">
+                    <div class="card ml-status-card">
+                        <h2><i class="fas fa-microchip"></i> Model Status</h2>
+                        <div class="ml-status-grid">
+                            <div class="ml-stat">
+                                <span class="ml-stat-label">Status</span>
+                                <span class="ml-stat-value" id="mlTrainedStatus">--</span>
+                            </div>
+                            <div class="ml-stat">
+                                <span class="ml-stat-label">Samples</span>
+                                <span class="ml-stat-value" id="mlSamples">0</span>
+                            </div>
+                            <div class="ml-stat">
+                                <span class="ml-stat-label">Trainings</span>
+                                <span class="ml-stat-value" id="mlTrainCount">0</span>
+                            </div>
+                            <div class="ml-stat">
+                                <span class="ml-stat-label">Anomaly Rate</span>
+                                <span class="ml-stat-value" id="mlAnomalyRate">--</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card ml-dns-card">
+                        <h2><i class="fas fa-globe"></i> DNS Cache</h2>
+                        <div class="ml-dns-stats">
+                            <span class="ml-dns-item">Cached: <strong id="dnsCached">0</strong></span>
+                            <span class="ml-dns-item">Pending: <strong id="dnsPending">0</strong></span>
+                        </div>
+                    </div>
+
+                    <div class="card ml-chart-card">
+                        <h2><i class="fas fa-chart-line"></i> Anomaly Scores</h2>
+                        <div class="chart-container">
+                            <canvas id="anomalyChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="card ml-ip-card">
+                        <h2><i class="fas fa-network-wired"></i> IP Threat Scores</h2>
+                        <div class="ip-threat-list" id="ipThreatList">
+                            <p class="no-data">Collecting data...</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div id="toastContainer"></div>
+
     <script>
         let updateInterval;
+        let allAlerts = [];
+        let trafficData = [];
+        let patternData = { TCP: [], UDP: [], ICMP: [] };
+        let charts = {};
+        let previousStats = { packets: 0, ips: 0, alerts: 0 };
+        let darkMode = true;
 
-        function showToast(message, type) {
-            const existing = document.querySelector('.toast');
-            if (existing) existing.remove();
-            const toast = document.createElement('div');
-            toast.className = `toast ${type}`;
-            toast.textContent = message;
-            document.body.appendChild(toast);
+        // Tab Navigation
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const section = btn.dataset.section;
+                switchSection(section);
+            });
+        });
+
+        function switchSection(section) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelector(`.tab-btn[data-section="${section}"]`).classList.add('active');
+            document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
+            document.getElementById(`section-${section}`).classList.add('active');
+
+            // Resize charts after section becomes visible
             setTimeout(() => {
-                toast.style.animation = 'slideOut 0.3s ease forwards';
-                setTimeout(() => toast.remove(), 300);
-            }, 2000);
+                Object.values(charts).forEach(chart => {
+                    if (chart && chart.resize) {
+                        chart.resize();
+                        chart.update('none');
+                    }
+                });
+            }, 150);
         }
 
-        function setStatus(status) {
-            const indicator = document.getElementById('statusIndicator');
-            indicator.className = `status-indicator ${status}`;
-            const labels = { stopped: '● Stopped', starting: '◐ Starting...', running: '▶ Running', stopping: '◑ Stopping...' };
-            indicator.textContent = labels[status];
+        // Clock
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('liveClock').textContent = now.toLocaleTimeString('en-US', {hour12: false});
         }
+        setInterval(updateClock, 1000);
+        updateClock();
 
-let darkMode = true;
+        // Theme
         function toggleTheme() {
             darkMode = !darkMode;
             document.body.className = darkMode ? '' : 'light';
-            document.getElementById('themeBtn').textContent = darkMode ? '🌙' : '☀️';
-            if (chart) initChart();
+            document.getElementById('themeIcon').className = darkMode ? 'fas fa-moon' : 'fas fa-sun';
+            updateChartsTheme();
         }
 
-        function initChart() {
-            const ctx = document.getElementById('trafficChart').getContext('2d');
-            const gridColor = darkMode ? '#1a1a2e' : '#e0e0e0';
+        function updateChartsTheme() {
+            const gridColor = darkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
             const textColor = darkMode ? '#888' : '#666';
-            chart = new Chart(ctx, {
+            Object.values(charts).forEach(chart => {
+                if (chart.options.scales) {
+                    if (chart.options.scales.y) chart.options.scales.y.grid.color = gridColor;
+                    if (chart.options.scales.x) chart.options.scales.x.ticks.color = textColor;
+                }
+                if (chart.update) chart.update('none');
+            });
+        }
+
+        // Toast
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.innerHTML = `<i class="fas fa-${type === 'success' ? 'check' : type === 'error' ? 'times' : 'info-circle'}"></i> ${message}`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.add('toast-exit');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // Status
+        function setStatus(status) {
+            const indicator = document.getElementById('statusIndicator');
+            indicator.className = `status-indicator ${status}`;
+            const labels = { stopped: 'Stopped', starting: 'Starting...', running: 'Running', stopping: 'Stopping...' };
+            indicator.querySelector('.status-text').textContent = labels[status];
+        }
+
+        // Initialize Charts
+        function initCharts() {
+            const gridColor = darkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+            const textColor = darkMode ? '#888' : '#666';
+
+            charts.traffic = new Chart(document.getElementById('trafficChart'), {
                 type: 'line',
-                data: {
-                    labels: [],
-                    datasets: [{
-                        label: 'Packets/sec',
-                        data: [],
-                        borderColor: darkMode ? '#00d9ff' : '#007bff',
-                        backgroundColor: darkMode ? 'rgba(0, 217, 255, 0.1)' : 'rgba(0, 123, 255, 0.1)',
-                        borderWidth: 2,
-                        fill: true,
-                        tension: 0.3,
-                        pointRadius: 0,
-                        pointHoverRadius: 4
-                    }]
-                },
+                data: { labels: [], datasets: [{ label: 'Packets/sec', data: [], borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', borderWidth: 2, fill: true, tension: 0.4 }] },
                 options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    animation: { duration: 600, easing: 'easeInOutQuart' },
-                    interaction: { intersect: false, mode: 'index' },
-                    scales: {
-                        y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: textColor, font: { size: 10 } } },
-                        x: { grid: { display: false }, ticks: { color: textColor, maxTicksLimit: 8, font: { size: 10 } } }
-                    },
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: { backgroundColor: darkMode ? '#16213e' : '#fff', titleColor: darkMode ? '#eee' : '#222', bodyColor: darkMode ? '#00d9ff' : '#007bff' }
-                    }
+                    responsive: true, maintainAspectRatio: false, animation: { duration: 500 },
+                    scales: { y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: textColor } }, x: { grid: { display: false }, ticks: { color: textColor, maxTicksLimit: 8 } } },
+                    plugins: { legend: { display: false } }
+                }
+            });
+
+            charts.protocol = new Chart(document.getElementById('protocolChart'), {
+                type: 'doughnut',
+                data: { labels: ['TCP', 'UDP', 'ICMP', 'OTHER'], datasets: [{ data: [0, 0, 0, 0], backgroundColor: ['#3b82f6', '#ef4444', '#f59e0b', '#10b981'], borderWidth: 0 }] },
+                options: { responsive: true, maintainAspectRatio: false, cutout: '60%', plugins: { legend: { position: 'bottom', labels: { color: textColor } } } }
+            });
+
+            charts.alertTypes = new Chart(document.getElementById('alertTypeChart'), {
+                type: 'bar',
+                data: { labels: [], datasets: [{ label: 'Alerts', data: [], backgroundColor: 'rgba(59, 130, 246, 0.6)', borderRadius: 8 }] },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: textColor, stepSize: 1 } }, x: { grid: { display: false }, ticks: { color: textColor } } },
+                    plugins: { legend: { display: false } }
+                }
+            });
+
+            charts.pattern = new Chart(document.getElementById('patternChart'), {
+                type: 'line',
+                data: { labels: [], datasets: [
+                    { label: 'TCP', data: [], borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', fill: true, tension: 0.4 },
+                    { label: 'UDP', data: [], borderColor: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.1)', fill: true, tension: 0.4 },
+                    { label: 'ICMP', data: [], borderColor: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.1)', fill: true, tension: 0.4 }
+                ]},
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: textColor } }, x: { grid: { display: false }, ticks: { color: textColor, maxTicksLimit: 8 } } }
                 }
             });
         }
 
+        // Controls
         function startSniffing() {
             setStatus('starting');
             fetch("/api/start", { method: "POST" })
                 .then(res => res.json())
                 .then(() => {
                     setStatus('running');
-                    showToast('Packet capture started!', 'success');
+                    showToast('Packet capture started', 'success');
                     document.getElementById("startBtn").disabled = true;
                     document.getElementById("stopBtn").disabled = false;
-                    updateInterval = setInterval(updateDashboard, 2000);
                 })
                 .catch(() => {
                     setStatus('stopped');
@@ -154,31 +467,27 @@ let darkMode = true;
         function stopSniffing() {
             setStatus('stopping');
             fetch("/api/stop", { method: "POST" })
-                .then(res => res.json())
                 .then(() => {
                     setStatus('stopped');
-                    showToast('Packet capture stopped!', 'info');
+                    showToast('Packet capture stopped', 'info');
                     document.getElementById("startBtn").disabled = false;
                     document.getElementById("stopBtn").disabled = true;
-                    clearInterval(updateInterval);
-                    updateDashboard();
                 });
         }
 
         function resetAlerts() {
             fetch("/api/reset", { method: "POST" })
-                .then(res => res.json())
                 .then(() => {
-                    showToast('Alerts reset!', 'info');
-                    updateDashboard();
+                    showToast('Alerts reset', 'info');
+                    allAlerts = [];
+                    updateAlertsDisplay();
                 });
         }
 
         function testAlert() {
             fetch("/api/test", { method: "POST" })
-                .then(res => res.json())
                 .then(() => {
-                    showToast('Test alerts (ML + Blocked IP)!', 'success');
+                    showToast('Test alerts generated', 'success');
                     updateDashboard();
                 });
         }
@@ -187,91 +496,284 @@ let darkMode = true;
             window.open("/api/export", "_blank");
         }
 
+        function toggleAutoRefresh() {
+            const enabled = document.getElementById('autoRefresh').checked;
+            if (enabled) {
+                updateInterval = setInterval(updateDashboard, 2000);
+            } else {
+                clearInterval(updateInterval);
+            }
+        }
+
         function updateDashboard() {
             fetch("/api/alerts")
                 .then(res => res.json())
                 .then(alerts => {
-                    const container = document.getElementById("alertsContainer");
-                    container.innerHTML = alerts.map(a => `
-                        <div class="alert ${a.severity.toLowerCase()}">
-                            <span class="severity">${a.severity}</span>
-                            <span class="type">${a.type}</span>
-                            ${a.confidence ? `<span class="confidence">${Math.round(a.confidence * 100)}% confidence</span>` : ''}
-                            <span class="src">${a.src_ip || '-'} → ${a.dst_ip || '-'}</span>
-                            <span class="time">${a.timestamp || ''}</span>
-                            <span class="details">${a.details || ''}</span>
-                        </div>
-                    `).join("");
+                    allAlerts = alerts;
+                    updateAlertsDisplay();
+                    updateThreatLevel();
+                    const alertDiff = alerts.length - previousStats.alerts;
                     document.getElementById("alertCount").textContent = alerts.length;
+                    updateTrend('alertTrend', alertDiff);
+                    previousStats.alerts = alerts.length;
                 });
 
-fetch("/api/status")
+            fetch("/api/status")
                 .then(res => res.json())
                 .then(data => {
-                    document.getElementById("packetCount").textContent = data.stats.packet_count || 0;
-                    document.getElementById("uniqueIPs").textContent = data.stats.unique_ips || 0;
-                    document.getElementById("dataSize").textContent = Math.round((data.stats.total_bytes || 0) / 1024);
+                    const packetDiff = (data.stats.packet_count || 0) - previousStats.packets;
+                    const ipDiff = (data.stats.unique_ips || 0) - previousStats.ips;
+                    document.getElementById("packetCount").textContent = (data.stats.packet_count || 0).toLocaleString();
+                    document.getElementById("uniqueIPs").textContent = (data.stats.unique_ips || 0).toLocaleString();
+                    document.getElementById("dataSize").textContent = Math.round((data.stats.total_bytes || 0) / 1024) + ' KB';
+                    document.getElementById("packetsPerSec").textContent = data.stats.graph ? data.stats.graph.packets_per_sec : 0;
+                    updateTrend('packetTrend', packetDiff);
+                    updateTrend('ipTrend', ipDiff);
+                    previousStats.packets = data.stats.packet_count || 0;
+                    previousStats.ips = data.stats.unique_ips || 0;
+
                     const sources = data.stats.top_sources || [];
-                    document.getElementById("topSources").innerHTML = sources.map(([ip, count]) =>
-                        `<li>${ip} <span>${count} packets</span></li>`
-                    ).join("");
+                    const sourcesHtml = sources.length > 0
+                        ? sources.map(([ip, count]) => `<div class="source-item"><span class="source-ip">${ip}</span><span class="source-count">${count} packets</span></div>`).join('')
+                        : '<p class="no-data">No data available</p>';
+                    document.getElementById("topSources").innerHTML = sourcesHtml;
+
                     if (data.stats.graph) {
-                        updateChart(data.stats.graph.packets_per_sec || 0);
+                        updateTrafficChart(data.stats.graph.packets_per_sec || 0);
+                    }
+                    if (data.stats.protocol_distribution) {
+                        updateProtocolChart(data.stats.protocol_distribution);
+                        updateProtocolThreats(data.stats.protocol_distribution);
+                    }
+                    if (data.stats.graph && data.stats.graph.protocol_pattern) {
+                        updatePatternChart(data.stats.graph.protocol_pattern);
                     }
                 });
         }
 
-        setInterval(updateDashboard, 2000);
+        function updateTrend(elementId, diff) {
+            const el = document.getElementById(elementId);
+            if (diff > 0) { el.className = 'stat-trend up'; el.textContent = `+${diff}`; }
+            else if (diff < 0) { el.className = 'stat-trend down'; el.textContent = `${diff}`; }
+            else { el.className = 'stat-trend'; el.textContent = '--'; }
+        }
 
-        let trafficData = [];
-        let chart;
+        function updateAlertsDisplay() {
+            const container = document.getElementById("alertsContainer");
+            const severityFilter = document.getElementById("severityFilter").value;
+            let filteredAlerts = allAlerts;
+            if (severityFilter !== 'all') {
+                filteredAlerts = filteredAlerts.filter(a => a.severity === severityFilter);
+            }
+            if (filteredAlerts.length === 0) {
+                container.innerHTML = '<p class="no-data">No alerts yet</p>';
+                return;
+            }
+            container.innerHTML = filteredAlerts.slice(-10).reverse().map(a => {
+                const srcDisplay = a.src_ip_display || a.src_ip || '-';
+                const dstDisplay = a.dst_ip_display || a.dst_ip || '-';
+                return `<div class="alert alert-${a.severity.toLowerCase()}">
+                    <div class="alert-header">
+                        <span class="alert-severity">${a.severity}</span>
+                        <span class="alert-type">${a.type}</span>
+                        ${a.confidence ? `<span class="alert-confidence">${Math.round(a.confidence * 100)}%</span>` : ''}
+                    </div>
+                    <div class="alert-body">
+                        <span class="alert-ips">${srcDisplay} → ${dstDisplay}</span>
+                    </div>
+                    <div class="alert-details">${a.details || ''}</div>
+                </div>`;
+            }).join('');
+            updateAlertTypeChart();
+        }
 
-        function initChart() {
-            const ctx = document.getElementById('trafficChart').getContext('2d');
-            chart = new Chart(ctx, {
+        function filterAlerts() { updateAlertsDisplay(); }
+
+        function updateThreatLevel() {
+            const critical = allAlerts.filter(a => a.severity === 'CRITICAL').length;
+            const high = allAlerts.filter(a => a.severity === 'HIGH').length;
+            const medium = allAlerts.filter(a => a.severity === 'MEDIUM').length;
+            const total = allAlerts.length;
+            document.getElementById("criticalCount").textContent = critical;
+            document.getElementById("highCount").textContent = high;
+            document.getElementById("mediumCount").textContent = medium;
+            let threatPercent = 0;
+            let threatLevel = 'Low';
+            let threatColor = '#10b981';
+            if (total > 0) {
+                threatPercent = Math.min(((critical * 3 + high * 1.5 + medium) / total) * 100, 100);
+                if (threatPercent > 60) { threatLevel = 'High'; threatColor = '#ef4444'; }
+                else if (threatPercent > 30) { threatLevel = 'Medium'; threatColor = '#f59e0b'; }
+            }
+            const meter = document.getElementById('threatMeter');
+            const circumference = 314;
+            meter.style.strokeDashoffset = circumference - (threatPercent / 100) * circumference;
+            meter.style.stroke = threatColor;
+            document.getElementById('threatValue').textContent = threatLevel;
+            document.getElementById('threatValue').style.color = threatColor;
+            const criticalContainer = document.getElementById('criticalAlerts');
+            const criticalAlerts = allAlerts.filter(a => a.severity === 'CRITICAL').slice(-5);
+            criticalContainer.innerHTML = criticalAlerts.length > 0 ? criticalAlerts.reverse().map(a => {
+                const srcDisplay = a.src_ip_display || a.src_ip || '-';
+                return `<div class="alert alert-critical"><span class="alert-type">${a.type}</span><span class="alert-ips">${srcDisplay}</span><span class="alert-details">${a.details || ''}</span></div>`;
+            }).join('') : '<p class="no-data">No critical alerts</p>';
+            const highContainer = document.getElementById('highAlerts');
+            const highAlertsList = allAlerts.filter(a => a.severity === 'HIGH').slice(-5);
+            highContainer.innerHTML = highAlertsList.length > 0 ? highAlertsList.reverse().map(a => {
+                const srcDisplay = a.src_ip_display || a.src_ip || '-';
+                return `<div class="alert alert-high"><span class="alert-type">${a.type}</span><span class="alert-ips">${srcDisplay}</span><span class="alert-details">${a.details || ''}</span></div>`;
+            }).join('') : '<p class="no-data">No high priority alerts</p>';
+        }
+
+        function updateAlertTypeChart() {
+            if (!charts.alertTypes) return;
+            const types = {};
+            allAlerts.forEach(a => { types[a.type] = (types[a.type] || 0) + 1; });
+            charts.alertTypes.data.labels = Object.keys(types);
+            charts.alertTypes.data.datasets[0].data = Object.values(types);
+            charts.alertTypes.update('none');
+        }
+
+        function updateTrafficChart(packetsPerSec) {
+            if (!charts.traffic) return;
+            const now = new Date().toLocaleTimeString();
+            trafficData.push({ time: now, value: packetsPerSec });
+            if (trafficData.length > 30) trafficData.shift();
+            charts.traffic.data.labels = trafficData.map(d => d.time);
+            charts.traffic.data.datasets[0].data = trafficData.map(d => d.value);
+            charts.traffic.update('none');
+        }
+
+        function updateProtocolChart(distribution) {
+            if (!charts.protocol) return;
+            charts.protocol.data.datasets[0].data = [distribution.TCP || 0, distribution.UDP || 0, distribution.ICMP || 0, distribution.OTHER || 0];
+            charts.protocol.update('none');
+        }
+
+        function updatePatternChart(pattern) {
+            if (!charts.pattern) return;
+            const now = new Date().toLocaleTimeString();
+            ['TCP', 'UDP', 'ICMP'].forEach(proto => {
+                patternData[proto].push({ time: now, value: pattern[proto] || 0 });
+                if (patternData[proto].length > 30) patternData[proto].shift();
+            });
+            charts.pattern.data.labels = patternData.TCP.map(d => d.time);
+            charts.pattern.data.datasets[0].data = patternData.TCP.map(d => d.value);
+            charts.pattern.data.datasets[1].data = patternData.UDP.map(d => d.value);
+            charts.pattern.data.datasets[2].data = patternData.ICMP.map(d => d.value);
+            charts.pattern.update('none');
+        }
+
+        function updateProtocolThreats(distribution) {
+            const container = document.getElementById('protocolThreats');
+            const protoAlerts = { TCP: 0, UDP: 0, ICMP: 0, OTHER: 0 };
+            allAlerts.forEach(a => {
+                let proto = 'OTHER';
+                if (a.type && a.type.includes('SYN')) proto = 'TCP';
+                else if (a.type && a.type.includes('Port Scan')) proto = 'TCP';
+                else if (a.protocol) { const p = a.protocol.toUpperCase(); if (['TCP', 'UDP', 'ICMP'].includes(p)) proto = p; }
+                protoAlerts[proto]++;
+            });
+            const totalAlerts = Object.values(protoAlerts).reduce((a, b) => a + b, 0) || 1;
+            const protocols = [
+                { name: 'TCP', icon: 'fa-code-branch', alerts: protoAlerts.TCP },
+                { name: 'UDP', icon: 'fa-random', alerts: protoAlerts.UDP },
+                { name: 'ICMP', icon: 'fa-bolt', alerts: protoAlerts.ICMP },
+                { name: 'OTHER', icon: 'fa-ellipsis-h', alerts: protoAlerts.OTHER }
+            ];
+            container.innerHTML = protocols.map(p => {
+                const barWidth = totalAlerts > 0 ? (p.alerts / totalAlerts) * 100 : 0;
+                let level = 'Safe', color = 'var(--text-secondary)';
+                if (p.alerts > 0) { level = 'Low'; color = 'var(--success)'; }
+                if (p.alerts >= 3) { level = 'Medium'; color = 'var(--warning)'; }
+                if (p.alerts >= 5) { level = 'High'; color = 'var(--danger)'; }
+                return `<div class="protocol-threat-item"><span class="protocol-name"><i class="fas ${p.icon}"></i> ${p.name}</span><div class="threat-bar"><div class="threat-fill" style="width: ${Math.max(barWidth, 3)}%; background: ${color};"></div></div><span class="threat-level" style="color: ${color}">${level} (${p.alerts})</span></div>`;
+            }).join('');
+        }
+
+        function initMLChart() {
+            const gridColor = darkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+            const textColor = darkMode ? '#888' : '#666';
+            charts.anomaly = new Chart(document.getElementById('anomalyChart'), {
                 type: 'line',
-                data: {
-                    labels: [],
-                    datasets: [{
-                        label: 'Packets/sec',
-                        data: [],
-                        borderColor: '#00d9ff',
-                        backgroundColor: 'rgba(0, 217, 255, 0.1)',
-                        borderWidth: 2,
-                        fill: true,
-                        tension: 0.3,
-                        pointRadius: 0,
-                        pointHoverRadius: 4
-                    }]
-                },
+                data: { labels: [], datasets: [{ label: 'Anomaly Score', data: [], backgroundColor: 'rgba(59, 130, 246, 0.1)', borderColor: '#3b82f6', borderWidth: 2, fill: true, tension: 0.4, pointRadius: 0 }] },
                 options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    animation: { duration: 600, easing: 'easeInOutQuart' },
-                    interaction: { intersect: false, mode: 'index' },
-                    scales: {
-                        y: { beginAtZero: true, grid: { color: '#1a1a2e' }, ticks: { color: '#888', font: { size: 10 } } },
-                        x: { grid: { display: false }, ticks: { color: '#888', maxTicksLimit: 8, font: { size: 10 } } }
-                    },
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: { backgroundColor: '#16213e', titleColor: '#eee', bodyColor: '#00d9ff' }
-                    }
+                    responsive: true, maintainAspectRatio: false, animation: { duration: 500 },
+                    scales: { y: { beginAtZero: true, max: 1, grid: { color: gridColor }, ticks: { color: textColor } }, x: { grid: { display: false }, ticks: { color: textColor, maxTicksLimit: 8 } } },
+                    plugins: { legend: { display: false } }
                 }
             });
         }
 
-        function updateChart(packetsPerSec) {
-            if (!chart) initChart();
-            const now = new Date().toLocaleTimeString();
-            trafficData.push({ time: now, value: packetsPerSec });
-            if (trafficData.length > 20) trafficData.shift();
-            chart.data.labels = trafficData.map(d => d.time);
-            chart.data.datasets[0].data = trafficData.map(d => d.value);
-            chart.update();
+        function updateML() {
+            fetch("/api/ml/status").then(res => res.json()).then(data => {
+                if (data.error) return;
+                if (data.anomaly_status) {
+                    const s = data.anomaly_status;
+                    document.getElementById('mlTrainedStatus').textContent = s.is_trained ? 'Trained' : 'Untrained';
+                    document.getElementById('mlTrainedStatus').style.color = s.is_trained ? 'var(--success)' : 'var(--warning)';
+                    document.getElementById('mlSamples').textContent = s.buffer_size.toLocaleString();
+                    document.getElementById('mlTrainCount').textContent = s.train_count;
+                    document.getElementById('mlAnomalyRate').textContent = (s.anomaly_rate * 100).toFixed(1) + '%';
+                    const badge = document.getElementById('mlBadge');
+                    if (s.is_trained) { badge.className = 'ml-badge ml-badge-ok'; badge.textContent = 'Active'; }
+                    else if (s.buffer_size >= s.min_samples) { badge.className = 'ml-badge ml-badge-warn'; badge.textContent = 'Ready'; }
+                    else { badge.className = 'ml-badge ml-badge-warn'; badge.textContent = `Collecting (${s.buffer_size}/${s.min_samples})`; }
+                }
+                if (data.dns_cache) {
+                    document.getElementById('dnsCached').textContent = data.dns_cache.cached;
+                    document.getElementById('dnsPending').textContent = data.dns_cache.pending;
+                }
+                if (data.anomaly_scores) updateAnomalyChart(data.anomaly_scores);
+                if (data.ip_scores) updateIPThreatList(data.ip_scores);
+            });
         }
 
-        initChart();
+        function updateAnomalyChart(scores) {
+            if (!charts.anomaly) return;
+            const times = scores.map(s => new Date(s.timestamp * 1000).toLocaleTimeString());
+            const values = scores.map(s => s.score);
+            charts.anomaly.data.labels = times;
+            charts.anomaly.data.datasets[0].data = values;
+            charts.anomaly.data.datasets[0].borderColor = values.map(v => v > 0.7 ? '#ef4444' : v > 0.5 ? '#f59e0b' : '#3b82f6');
+            charts.anomaly.data.datasets[0].backgroundColor = values.map(v => v > 0.7 ? 'rgba(239,68,68,0.2)' : v > 0.5 ? 'rgba(245,158,11,0.2)' : 'rgba(59,130,246,0.1)');
+            charts.anomaly.update('none');
+        }
+
+        function updateIPThreatList(scores) {
+            const container = document.getElementById('ipThreatList');
+            if (!scores || scores.length === 0) { container.innerHTML = '<p class="no-data">No IP data yet</p>'; return; }
+            const topIPs = scores.slice(0, 15);
+            const maxScore = Math.max(...topIPs.map(s => s.score), 1);
+            container.innerHTML = topIPs.map(s => `<div class="ip-threat-item"><span class="ip-threat-ip">${s.ip}</span><div class="ip-threat-bar"><div class="ip-threat-fill" style="width: ${(s.score / maxScore) * 100}%; background: ${s.color};"></div></div><span class="ip-threat-score" style="color: ${s.color}">${s.score}</span></div>`).join('');
+        }
+
+        function trainModel() {
+            const btn = document.getElementById('trainBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="btn-icon fas fa-spinner fa-spin"></i> Training...';
+            fetch("/api/ml/train", { method: "POST" }).then(res => res.json()).then(data => {
+                if (data.success) showToast('Model trained successfully', 'success');
+                else showToast('Training: ' + data.message, 'error');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="btn-icon fas fa-graduation-cap"></i> Train Model';
+            });
+        }
+
+        function resetModel() {
+            fetch("/api/ml/reset", { method: "POST" }).then(res => res.json()).then(data => {
+                showToast('ML system reset', 'info');
+                if (charts.anomaly) { charts.anomaly.data.labels = []; charts.anomaly.data.datasets[0].data = []; charts.anomaly.update('none'); }
+                document.getElementById('ipThreatList').innerHTML = '<p class="no-data">Reset — collecting...</p>';
+            });
+        }
+
+        // Initialize
+        initCharts();
+        initMLChart();
+        updateInterval = setInterval(updateDashboard, 2000);
+        setInterval(updateML, 2000);
+        updateDashboard();
     </script>
 </body>
 </html>
